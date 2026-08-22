@@ -76,6 +76,8 @@ async function run() {
   }
 
   console.log('🚀 Step 6: Pushing to branch main...');
+  const token = process.argv[2] || process.env.GITHUB_TOKEN;
+
   try {
     const pushResult = await git.push({
       fs,
@@ -83,14 +85,22 @@ async function run() {
       dir: repoDir,
       remote: 'origin',
       ref: 'main',
-      force: true
+      force: true,
+      onAuth: () => {
+        if (token) {
+          return { username: token, password: '' };
+        }
+        return undefined;
+      }
     });
     console.log('Push result:', pushResult);
-    console.log('✅ Repository successfully pushed to GitHub!');
+    console.log('🎉 Repository successfully pushed to https://github.com/HealthyHustle/MindBridgeGlobal12.git !');
   } catch (pushErr) {
-    console.log('⚠️ Push authentication note:', pushErr.message);
-    if (pushErr.data) {
-      console.log('Details:', pushErr.data);
+    if (!token) {
+      console.log('⚠️ Perhatian: GitHub membutuhkan Personal Access Token (PAT) untuk push.');
+      console.log('👉 Jalankan: node scripts/git-deploy.cjs <GITHUB_TOKEN>');
+    } else {
+      console.log('⚠️ Push error:', pushErr.message);
     }
   }
 }
