@@ -1,0 +1,102 @@
+import { Region } from '../types';
+
+export const REGIONS_DATA: Region[] = [
+  {
+    id: 'sumatera',
+    name: 'Sumatera',
+    island: 'Pulau Sumatera',
+    description: 'Wilayah barat Indonesia dengan disparitas infrastruktur antara kawasan pesisir timur dengan daerah pedalaman dan kepulauan terluar.',
+    mainIssue: 'Distribusi Fasilitas & Literasi Digital',
+    articlesCount: 42,
+    percentage: 64,
+    schoolAccessIndex: 78,
+    digitalLiteracyIndex: 66,
+    bullyingReportRate: 59,
+    keyHighlight: 'Tantangan konektivitas di kepulauan Nias & Mentawai serta penguatan peran guru BK di sekolah menengah.',
+    mapCoords: { x: 17, y: 38 }
+  },
+  {
+    id: 'jawa',
+    name: 'Jawa',
+    island: 'Pulau Jawa',
+    description: 'Pusat konsentrasi populasi dan fasilitas pendidikan nasional, dengan tantangan utama pada kompetisi akademik tinggi, perundungan siber, dan disparitas mutu pinggiran kota.',
+    mainIssue: 'Cyberbullying & Tekanan Mental',
+    articlesCount: 88,
+    percentage: 82,
+    schoolAccessIndex: 94,
+    digitalLiteracyIndex: 84,
+    bullyingReportRate: 76,
+    keyHighlight: 'Akses digital tertinggi namun memiliki prevalensi kasus cyberbullying dan burnout belajar yang signifikan pada peserta didik.',
+    mapCoords: { x: 36, y: 76 }
+  },
+  {
+    id: 'kalimantan',
+    name: 'Kalimantan',
+    island: 'Pulau Kalimantan',
+    description: 'Kawasan dengan tantangan akses geografis sungai dan perbatasan, serta percepatan transisi pusat gravitasi baru menuju IKN Nusantara.',
+    mainIssue: 'Akses Geografis & Tenaga Pendidik',
+    articlesCount: 35,
+    percentage: 58,
+    schoolAccessIndex: 72,
+    digitalLiteracyIndex: 68,
+    bullyingReportRate: 48,
+    keyHighlight: 'Dibutuhkan penguatan guru perintis di hulu sungai dan pembangunan smart learning hub di perbatasan.',
+    mapCoords: { x: 44, y: 35 }
+  },
+  {
+    id: 'sulawesi',
+    name: 'Sulawesi',
+    island: 'Pulau Sulawesi',
+    description: 'Kepulauan dengan potensi maritim tinggi yang membutuhkan penguatan model pembelajaran adaptif dan integrasi kearifan lokal dalam kurikulum.',
+    mainIssue: 'Mutu Pembelajaran & Sarana Sains',
+    articlesCount: 39,
+    percentage: 62,
+    schoolAccessIndex: 75,
+    digitalLiteracyIndex: 65,
+    bullyingReportRate: 52,
+    keyHighlight: 'Program reskilling guru vokasi dan revitalisasi laboratorium sains sekolah di Sulawesi Tengah dan Barat.',
+    mapCoords: { x: 63, y: 44 }
+  },
+  {
+    id: 'bali-nusra',
+    name: 'Bali & Nusa Tenggara',
+    island: 'Kepulauan Nusa Tenggara',
+    description: 'Wilayah dengan kontras tinggi antara ekosistem pariwisata maju di Bali dengan tantangan sarana air bersih & ruang kelas di pelosok NTT/NTB.',
+    mainIssue: 'Kesenjangan Sarana Fisik & Nutrisi',
+    articlesCount: 31,
+    percentage: 60,
+    schoolAccessIndex: 69,
+    digitalLiteracyIndex: 61,
+    bullyingReportRate: 45,
+    keyHighlight: 'Korelasi antara program nutrisi anak sekolah dan daya serap pembelajaran kritis di daerah pedesaan.',
+    mapCoords: { x: 60, y: 84 }
+  },
+  {
+    id: 'maluku',
+    name: 'Maluku',
+    island: 'Kepulauan Maluku',
+    description: 'Gugusan pulau dengan biaya logistik pendidikan tinggi, membutuhkan strategi pembelajaran berbasis modul interaktif luring dan satelit internet.',
+    mainIssue: 'Konektivitas Antar-Pulau & Laboratorium',
+    articlesCount: 24,
+    percentage: 53,
+    schoolAccessIndex: 64,
+    digitalLiteracyIndex: 58,
+    bullyingReportRate: 41,
+    keyHighlight: 'Inovasi sekolah perahu dan guru keliling lintas pulau karang untuk memastikan hak belajar tetap terpenuhi.',
+    mapCoords: { x: 77, y: 44 }
+  },
+  {
+    id: 'papua',
+    name: 'Papua',
+    island: 'Tanah Papua',
+    description: 'Wilayah terluar dengan tantangan geografis pegunungan dan pesisir terisolir, membutuhkan pendekatan pendidikan humanis, literasi dasar, dan guru kontekstual.',
+    mainIssue: 'Aksesibilitas Dasar & Guru Kontekstual',
+    articlesCount: 29,
+    percentage: 71,
+    schoolAccessIndex: 52,
+    digitalLiteracyIndex: 48,
+    bullyingReportRate: 38,
+    keyHighlight: 'Urgensi percepatan literasi numerasi dasar dan perlindungan guru garis depan di pegunungan tengah.',
+    mapCoords: { x: 90, y: 48 }
+  }
+];
