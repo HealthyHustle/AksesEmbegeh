@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const repoDir = process.cwd();
-const remoteUrl = 'https://github.com/HealthyHustle/MindBridgeGlobal12.git';
+const remoteUrl = 'https://github.com/HealthyHustle/MindBridgeGlobal02.git';
 
 async function getAllFiles(dir, base = '') {
   const entries = fs.readdirSync(dir, { withFileTypes: true });

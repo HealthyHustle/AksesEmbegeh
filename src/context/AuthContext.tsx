@@ -6,7 +6,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   login: (email?: string, password?: string) => boolean;
-  register: (name: string, email: string, password?: string, role?: string) => boolean;
+  register: (name: string, email: string, password?: string, institution?: string, role?: string) => boolean;
   logout: () => void;
   updateProfile: (updatedData: Partial<User>) => void;
 }
@@ -33,14 +33,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return true;
   };
 
-  const register = (name: string, email: string, _password?: string, role?: string): boolean => {
+  const register = (name: string, email: string, _password?: string, institution?: string, role?: string): boolean => {
     const newUser: User = {
       id: `usr-${Date.now()}`,
       name: name || 'Pendidik Muda',
       email: email,
-      role: (role as any) || 'Mahasiswa Pendidikan',
+      role: role || 'Mahasiswa Pendidikan',
       avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-      institution: 'Universitas Indonesia',
+      institution: institution || 'Universitas Indonesia',
       bio: 'Pemerhati pendidikan inklusif dan penalaran kritis.',
       joinedAt: 'Hari ini'
     };

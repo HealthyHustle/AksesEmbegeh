@@ -191,7 +191,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'Mahasiswa Pendidikan' | 'Calon Guru' | 'Guru' | 'Peneliti Muda' | 'Pengamat Pendidikan';
+  role: string;
   avatar: string;
   institution?: string;
   bio?: string;

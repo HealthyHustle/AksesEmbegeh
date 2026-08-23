@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { User, Mail, Lock, GraduationCap, ArrowRight, BrainCircuit } from 'lucide-react';
+import { User, Mail, Lock, School, ArrowRight, BrainCircuit } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { BatikPattern } from '../components/common/BatikPattern';
@@ -10,7 +10,7 @@ import logoImg from '../assets/logo.png';
 export const Register: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState('Mahasiswa Pendidikan');
+  const [university, setUniversity] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
@@ -20,7 +20,7 @@ export const Register: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !email || !password) {
+    if (!name.trim() || !email.trim() || !university.trim() || !password) {
       showToast('Harap lengkapi semua kolom pendaftaran.', 'error');
       return;
     }
@@ -29,7 +29,7 @@ export const Register: React.FC = () => {
       return;
     }
 
-    register(name, email, password, role);
+    register(name.trim(), email.trim(), password, university.trim());
     showToast('Pendaftaran akun berhasil! Selamat datang.', 'success');
     navigate('/profile');
   };
@@ -96,21 +96,18 @@ export const Register: React.FC = () => {
 
           <div>
             <label className="block text-xs font-bold uppercase text-slate-600 mb-1.5">
-              Peran / Profesi
+              Nama Universitas
             </label>
             <div className="relative">
-              <GraduationCap className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-slate-50 rounded-xl border border-slate-200 text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="Mahasiswa Pendidikan">Mahasiswa Pendidikan</option>
-                <option value="Calon Guru">Calon Guru</option>
-                <option value="Guru">Guru / Tenaga Pendidik</option>
-                <option value="Peneliti Muda">Peneliti Muda</option>
-                <option value="Pengamat Pendidikan">Pengamat / Umum</option>
-              </select>
+              <School className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={university}
+                onChange={(e) => setUniversity(e.target.value)}
+                placeholder="Contoh: Universitas Pendidikan Indonesia (UPI)"
+                className="w-full pl-10 pr-4 py-3 bg-slate-50 rounded-xl border border-slate-200 text-xs sm:text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
             </div>
           </div>
 
