@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { BatikPattern } from '../components/common/BatikPattern';
 import { ISSUES_DATA } from '../data/issues';
+import petaImg from '../assets/peta.png';
 
 export const Home: React.FC = () => {
   return (
@@ -123,7 +124,7 @@ export const Home: React.FC = () => {
                   <div className="relative w-full aspect-[2.45/1] max-w-sm">
                     {/* Authentic Map Graphic */}
                     <img
-                      src="/peta.png"
+                      src={petaImg}
                       alt="Peta Indonesia AI"
                       className="w-full h-full object-contain filter drop-shadow-[0_8px_16px_rgba(0,0,0,0.5)]"
                     />

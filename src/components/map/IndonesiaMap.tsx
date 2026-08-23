@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, BookOpen, ShieldAlert, Sparkles, ArrowRight, Activity, Award } from 'lucide-react';
 import { Region } from '../../types';
 import { REGIONS_DATA } from '../../data/regions';
+import petaImg from '../../assets/peta.png';
 
 interface IndonesiaMapProps {
   onSelectRegion?: (region: Region) => void;
@@ -82,7 +83,7 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
           
           {/* Authentic Map Image */}
           <img
-            src="/peta.png"
+            src={petaImg}
             alt="Peta Kepulauan Nusantara Indonesia"
             className="w-full h-full object-contain filter drop-shadow-[0_12px_24px_rgba(0,0,0,0.6)] pointer-events-none transition-all duration-500"
           />
