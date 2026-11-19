@@ -31,8 +31,10 @@ jobs:
       - name: Build project
         run: npm run build
 
-      - name: Create SPA 404 Fallback
-        run: cp dist/index.html dist/404.html
+      - name: Create SPA 404 Fallback & .nojekyll
+        run: |
+          cp dist/index.html dist/404.html
+          touch dist/.nojekyll
 
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
