@@ -38,6 +38,7 @@ jobs:
 
       - name: Create SPA 404 Fallback & .nojekyll
         run: |
+          if [ -f "dist/index.source.html" ]; then cp dist/index.source.html dist/index.html; fi
           cp dist/index.html dist/404.html
           touch dist/.nojekyll
 
