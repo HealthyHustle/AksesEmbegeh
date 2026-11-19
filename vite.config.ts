@@ -12,10 +12,12 @@ export default defineConfig(({ mode }) => ({
       ignored: ['**/*.png', '**/*.jpg', '**/*.jpeg', '**/*.svg', '**/gambar/**', '**/dist/**', '**/.git/**']
     },
     proxy: {
-      '/n8n-proxy': {
-        target: 'https://babah123.app.n8n.cloud',
+      // Proxy untuk n8n lokal (http://localhost:5678)
+      // Mencegah isu CORS dan resolusi IPv4/IPv6 localhost di browser
+      '/n8n-local': {
+        target: 'http://127.0.0.1:5678',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/n8n-proxy/, ''),
+        rewrite: (path) => path.replace(/^\/n8n-local/, ''),
         secure: false,
       }
     }

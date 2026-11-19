@@ -18,10 +18,12 @@ import {
 } from 'lucide-react';
 import { IssueTopicId, SocraticPhase, ChatMessage as ChatMessageType, SocraticScore } from '../types';
 import { AIService } from '../services/aiService';
+import { AILimitService } from '../services/aiLimitService';
 import { ChatMessage } from '../components/ai/ChatMessage';
 import { PhaseProgress } from '../components/ai/PhaseProgress';
 import { ScoreCardModal } from '../components/ai/ScoreCardModal';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 
 interface SavedSession {
   id: string;
@@ -44,7 +46,6 @@ export const CriticalMindAI: React.FC = () => {
 
   // Persistent Session IDs for n8n Memory
   const [sessionId, setSessionId] = useState<string>(() => `mbg_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`);
-  const [conversationId, setConversationId] = useState<string>(() => `conv_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`);
 
   const [savedSessions, setSavedSessions] = useState<SavedSession[]>(() => {
     const saved = localStorage.getItem('mbg_saved_ai_sessions');
@@ -77,6 +78,20 @@ export const CriticalMindAI: React.FC = () => {
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { showToast } = useToast();
+  const { user, isAuthenticated, openAuthModal } = useAuth();
+
+  const [quotaStatus, setQuotaStatus] = useState(() =>
+    AILimitService.getStatus(isAuthenticated, user?.id)
+  );
+
+  useEffect(() => {
+    setQuotaStatus(AILimitService.getStatus(isAuthenticated, user?.id));
+  }, [isAuthenticated, user?.id]);
+
+  useEffect(() => {
+    const unsub = AILimitService.subscribe((updated) => setQuotaStatus(updated));
+    return unsub;
+  }, []);
 
   // Save sessions to localStorage
   useEffect(() => {
@@ -95,7 +110,7 @@ export const CriticalMindAI: React.FC = () => {
           text: `Halo! Saya **Critical Mind AI**, asisten dialektika berpikir kritis Anda pada isu **Bullying & Iklim Keamanan Sekolah**.\n\nDi sini saya tidak akan memberikan jawaban langsung, melainkan mendampingi Anda membedah premis, menguji bukti, dan mengurai sudut pandang baru.\n\n*Apa pandangan atau asumsi awal Anda mengenai akar penyebab perundungan di lingkungan sekolah Indonesia saat ini?*`,
           timestamp,
           phase: 1,
-          phaseName: 'FASE 1 — Validasi & Eksplorasi',
+          phaseName: 'Fase 1: Validasi dan Eksplorasi',
           suggestedPrompts: [
             'Menurut saya bullying terjadi karena kurangnya pengawasan guru.',
             'Akar masalahnya adalah normalisasi ejekan verbal dalam pergaulan sebaya.',
@@ -113,7 +128,7 @@ export const CriticalMindAI: React.FC = () => {
           text: `Selamat datang di modul dialektika **Literasi Digital & Etika Informasi**.\n\nKecakapan digital melampaui kemampuan teknis gawai; ini adalah tentang bagaimana kita bernalar di tengah derasnya arus informasi dan kecerdasan buatan.\n\n*Menurut Anda, mengapa begitu banyak masyarakat terpelajar yang tetap rentan mempercayai dan menyebarkan hoaks atau informasi palsu?*`,
           timestamp,
           phase: 1,
-          phaseName: 'FASE 1 — Validasi & Eksplorasi',
+          phaseName: 'Fase 1: Validasi dan Eksplorasi',
           suggestedPrompts: [
             'Karena judul informasi yang sensasional memicu emosi sebelum nalar bekerja.',
             'Kurangnya kebiasaan verifikasi sumber silang (lateral reading) di sekolah.',
@@ -130,7 +145,7 @@ export const CriticalMindAI: React.FC = () => {
         text: `Selamat datang di ruang kajian **Ketimpangan Sosial & Pendidikan Daerah 3T**.\n\nMari kita bedah kompleksitas disparitas akses, fasilitas, dan kualitas pendidikan dengan kacamata keadilan distributif (*equity vs equality*).\n\n*Bagaimana Anda melihat solusi paling mendesak untuk mengatasi ketertinggalan fasilitas belajar di daerah pelosok Indonesia?*`,
         timestamp,
         phase: 1,
-        phaseName: 'FASE 1 — Validasi & Eksplorasi',
+        phaseName: 'Fase 1: Validasi dan Eksplorasi',
         suggestedPrompts: [
           'Pemerintah harus memastikan pemerataan listrik dan infrastruktur dasar terlebih dahulu.',
           'Pemberian insentif dan jaminan fasilitas tempat tinggal bagi guru perintis 3T.',
@@ -144,10 +159,8 @@ export const CriticalMindAI: React.FC = () => {
   const startNewSession = useCallback((topicToSet?: IssueTopicId) => {
     const nextTopic = topicToSet || activeTopic;
     const newSessId = `mbg_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-    const newConvId = `conv_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
 
     setSessionId(newSessId);
-    setConversationId(newConvId);
     if (topicToSet) {
       setActiveTopic(topicToSet);
     }
@@ -167,6 +180,23 @@ export const CriticalMindAI: React.FC = () => {
   const handleSendMessage = async (textToSend?: string) => {
     const text = textToSend || inputText;
     if (!text.trim() || isStreaming) return;
+
+    // Strict Anonymous & Authenticated Limit Check
+    const canRequest = AILimitService.canMakeRequest(isAuthenticated, user?.id);
+    if (!canRequest) {
+      if (!isAuthenticated) {
+        openAuthModal(
+          'Anda telah mencapai batas 3 pertanyaan untuk pengguna anonim. Masuk dengan akun gratis untuk melanjutkan dialektika kritis.',
+          '/critical-mind-ai'
+        );
+      } else {
+        showToast('Anda telah mencapai batas kuota harian akun.', 'info');
+      }
+      return;
+    }
+
+    const updatedQuota = AILimitService.consumeQuota(isAuthenticated, user?.id);
+    setQuotaStatus(updatedQuota);
 
     const userText = text.trim();
     const userTimestamp = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
@@ -188,7 +218,7 @@ export const CriticalMindAI: React.FC = () => {
       text: '',
       timestamp: aiTimestamp,
       phase: currentPhase,
-      phaseName: currentPhase === 1 ? 'FASE 1 — Validasi' : currentPhase === 2 ? 'FASE 2 — Penggalian Bukti' : 'FASE 3 — Sudut Pandang'
+      phaseName: currentPhase === 1 ? 'Fase 1: Validasi' : currentPhase === 2 ? 'Fase 2: Penggalian Bukti' : 'Fase 3: Sudut Pandang'
     };
 
     const updatedHistory = [...messages, userMsg, emptyAiMsg];
@@ -204,11 +234,11 @@ export const CriticalMindAI: React.FC = () => {
       userText.toLowerCase().includes('minta skor');
 
     try {
-      // 4-10: Stream from n8n production webhook (with resilient Socratic engine)
+      // Stream from n8n production webhook
       await AIService.streamFromN8N({
         message: userText,
+        userId: isAuthenticated && user?.id ? user.id : 'anonymous',
         sessionId,
-        conversationId,
         topic: activeTopic,
         conversationHistory: updatedHistory,
         onChunk: (chunk: string) => {
@@ -234,7 +264,7 @@ export const CriticalMindAI: React.FC = () => {
               prev.map(m => m.id === aiMsgId ? {
                 ...m,
                 phase: 4,
-                phaseName: 'FASE 4 — Konklusi & Skor',
+                phaseName: 'Fase 4: Kesimpulan dan Skor',
                 scoreCard,
                 suggestedPrompts: [
                   'Mulai sesi diskusi baru dengan topik lain',
@@ -250,7 +280,7 @@ export const CriticalMindAI: React.FC = () => {
               prev.map(m => m.id === aiMsgId ? {
                 ...m,
                 phase: nextPhase,
-                phaseName: nextPhase === 2 ? 'FASE 2 — Penggalian Bukti' : 'FASE 3 — Analisis Sudut Pandang',
+                phaseName: nextPhase === 2 ? 'Fase 2: Penggalian Bukti' : 'Fase 3: Analisis Sudut Pandang',
                 suggestedPrompts: nextPhase === 2 ? [
                   'Data survei menunjukkan peran penting iklim sekolah.',
                   'Berdasarkan pengamatan di sekolah saya...',
@@ -518,15 +548,27 @@ export const CriticalMindAI: React.FC = () => {
                 </div>
               </div>
 
-              {/* End Discussion Quick Button */}
-              <button
-                onClick={() => handleSendMessage('selesai')}
-                disabled={isStreaming || messages.length < 2}
-                className="px-3.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-xl border border-blue-200 transition-all flex items-center gap-1.5 disabled:opacity-40"
-              >
-                <Award className="w-4 h-4 text-blue-600" />
-                <span>Selesaikan & Minta Skor</span>
-              </button>
+              <div className="flex items-center gap-2">
+                {quotaStatus.isAnonymous ? (
+                  <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                    Sisa Kuota: {quotaStatus.remaining} / {quotaStatus.max}
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                    Calon Guru: {quotaStatus.remaining} tersisa
+                  </span>
+                )}
+
+                {/* End Discussion Quick Button */}
+                <button
+                  onClick={() => handleSendMessage('selesai')}
+                  disabled={isStreaming || messages.length < 2}
+                  className="px-3.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-xl border border-blue-200 transition-all flex items-center gap-1.5 disabled:opacity-40"
+                >
+                  <Award className="w-4 h-4 text-blue-600" />
+                  <span>Selesaikan & Minta Skor</span>
+                </button>
+              </div>
             </div>
 
             {/* MESSAGES SCROLL AREA */}
@@ -562,46 +604,78 @@ export const CriticalMindAI: React.FC = () => {
 
             {/* CHAT INPUT FORM */}
             <div className="p-4 bg-[#FAFCFF] border-t border-blue-100">
-              <div className="relative bg-white rounded-2xl border border-slate-200 shadow-sm focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
-                <textarea
-                  ref={textareaRef}
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  disabled={isStreaming}
-                  placeholder={
-                    isStreaming
-                      ? 'Critical Mind AI sedang merespons...'
-                      : `Tuliskan argumen atau tanggapan kritis Anda mengenai ${topicConfigs.find(t => t.id === activeTopic)?.name}...`
-                  }
-                  rows={2}
-                  className="w-full p-3.5 pr-24 rounded-2xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 resize-none focus:outline-none disabled:bg-slate-50"
-                />
-
-                {/* Send Button & Helper */}
-                <div className="absolute right-3 bottom-3 flex items-center gap-2">
-                  <span className="hidden sm:inline text-[10px] text-slate-400 font-medium">
-                    Enter ↵
-                  </span>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleSendMessage();
-                    }}
-                    disabled={!inputText.trim() || isStreaming}
-                    className="p-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-40 disabled:hover:bg-blue-600 transition-all shadow-sm"
-                    aria-label="Kirim argumen"
-                  >
-                    <Send className="w-4 h-4" />
-                  </button>
+              {quotaStatus.isExhausted && quotaStatus.isAnonymous ? (
+                <div className="p-4 rounded-2xl bg-amber-50 border border-amber-300 text-center space-y-2">
+                  <div className="text-xs font-bold text-amber-900">
+                    Batas Kuota Uji Coba Anonim Telah Habis (3/3 Pertanyaan)
+                  </div>
+                  <p className="text-xs text-slate-600 max-w-md mx-auto">
+                    Masuk ke akun calon guru Anda untuk melanjutkan diskusi tanpa batas, menyimpan riwayat dialektika, dan menerbitkan sertifikasi skor nalar kritis.
+                  </p>
+                  <div className="pt-1 flex items-center justify-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => openAuthModal('Masuk akun untuk melanjutkan dialektika AI.', '/critical-mind-ai')}
+                      className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm"
+                    >
+                      Masuk Akun Sekarang
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        AILimitService.resetAnonQuota();
+                        showToast('Kuota anonim direset untuk uji coba.', 'info');
+                      }}
+                      className="text-xs text-slate-500 hover:text-slate-800 underline"
+                    >
+                      Reset Kuota (Mode Evaluasi)
+                    </button>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <>
+                  <div className="relative bg-white rounded-2xl border border-slate-200 shadow-sm focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
+                    <textarea
+                      ref={textareaRef}
+                      value={inputText}
+                      onChange={(e) => setInputText(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      disabled={isStreaming}
+                      placeholder={
+                        isStreaming
+                          ? 'Critical Mind AI sedang merespons...'
+                          : `Tuliskan argumen atau tanggapan kritis Anda mengenai ${topicConfigs.find(t => t.id === activeTopic)?.name}...`
+                      }
+                      rows={2}
+                      className="w-full p-3.5 pr-24 rounded-2xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 resize-none focus:outline-none disabled:bg-slate-50"
+                    />
 
-              <div className="flex items-center justify-between text-[11px] text-slate-400 mt-2 px-1">
-                <span>Tekan <strong>Shift + Enter</strong> untuk baris baru.</span>
-                <span>Ketik <strong>"selesai"</strong> untuk merangkum evaluasi skor.</span>
-              </div>
+                    {/* Send Button & Helper */}
+                    <div className="absolute right-3 bottom-3 flex items-center gap-2">
+                      <span className="hidden sm:inline text-[10px] text-slate-400 font-medium">
+                        Enter ↵
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleSendMessage();
+                        }}
+                        disabled={!inputText.trim() || isStreaming}
+                        className="p-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-40 disabled:hover:bg-blue-600 transition-all shadow-sm"
+                        aria-label="Kirim argumen"
+                      >
+                        <Send className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px] text-slate-400 mt-2 px-1">
+                    <span>Tekan <strong>Shift + Enter</strong> untuk baris baru.</span>
+                    <span>Ketik <strong>"selesai"</strong> untuk merangkum evaluasi skor.</span>
+                  </div>
+                </>
+              )}
             </div>
 
           </main>

@@ -361,7 +361,7 @@ export const Explore: React.FC = () => {
 
             <div className="flex flex-wrap items-center gap-3">
               <Link
-                to="/critical-mind-ai"
+                to="/ai-learning"
                 className="px-5 py-3 rounded-xl bg-white text-blue-900 hover:bg-blue-50 font-bold text-xs shadow-sm transition-all"
               >
                 Diskusi dengan AI
@@ -415,7 +415,7 @@ export const Explore: React.FC = () => {
                   {activeReadingJournal.title}
                 </h3>
                 <div className="text-xs text-blue-200 mt-2">
-                  {activeReadingJournal.author} — {activeReadingJournal.institution}
+                  {activeReadingJournal.author} • {activeReadingJournal.institution}
                 </div>
               </div>
 

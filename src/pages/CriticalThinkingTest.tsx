@@ -83,7 +83,7 @@ export const CriticalThinkingTest: React.FC = () => {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-extrabold text-red-600 tracking-wider">
-                    01 — BULLYING
+                    01. Bullying
                   </span>
                   <span className="text-2xl">🤜</span>
                 </div>
@@ -135,7 +135,7 @@ export const CriticalThinkingTest: React.FC = () => {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-extrabold text-blue-600 tracking-wider">
-                    02 — LITERASI DIGITAL
+                    02. Literasi Digital
                   </span>
                   <span className="text-2xl">📱</span>
                 </div>
@@ -183,7 +183,7 @@ export const CriticalThinkingTest: React.FC = () => {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-extrabold text-amber-600 tracking-wider">
-                    03 — KETIMPANGAN SOSIAL
+                    03. Ketimpangan Sosial
                   </span>
                   <span className="text-2xl">⚖️</span>
                 </div>

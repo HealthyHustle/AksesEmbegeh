@@ -13,7 +13,8 @@ import {
   ShieldCheck, 
   Lock,
   Sparkles,
-  MessageSquare
+  MessageSquare,
+  User as UserIcon
 } from 'lucide-react';
 import { StorageService } from '../services/storageService';
 import { ForumThread as ForumThreadType, ForumReply } from '../types';
@@ -227,7 +228,13 @@ export const ForumThread: React.FC = () => {
           {isAuthenticated && user ? (
             <form onSubmit={handleAddReply} className="bg-white rounded-3xl p-6 border border-blue-200 shadow-soft space-y-4">
               <div className="flex items-center gap-3">
-                <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-xl object-cover" />
+                {user.avatar ? (
+                  <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-xl object-cover" />
+                ) : (
+                  <div className="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500">
+                    <UserIcon className="w-4 h-4 text-slate-500" />
+                  </div>
+                )}
                 <span className="text-xs font-bold text-navy">Beri Tanggapan sebagai {user.name}</span>
               </div>
 

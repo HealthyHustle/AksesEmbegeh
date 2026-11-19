@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
+import { Link, useSearchParams } from 'react-router-dom';
 import { 
   MessageSquare, 
   Users, 
@@ -13,28 +14,29 @@ import {
   Lock, 
   Pin, 
   X, 
-  Tag, 
-  Flame, 
-  CheckCircle2, 
-  HelpCircle, 
   CornerDownRight, 
-  Share2, 
   Menu, 
-  ArrowRight,
   Lightbulb,
-  Award
+  Award,
+  LogIn
 } from 'lucide-react';
 import { FORUM_ROOMS, ROOM_PINNED_PROMPTS, INITIAL_ROOM_PARTICIPANTS } from '../data/forum';
-import { IssueTopicId, RoomChatMessage, RoomParticipant } from '../types';
+import { IssueTopicId, RoomChatMessage } from '../types';
 import { StorageService } from '../services/storageService';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 
 export const Forum: React.FC = () => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, openAuthModal } = useAuth();
   const { showToast } = useToast();
+  const [searchParams] = useSearchParams();
 
-  const [activeRoomId, setActiveRoomId] = useState<IssueTopicId>('bullying');
+  const roomParam = searchParams.get('room') as IssueTopicId;
+  const initialRoom = (roomParam === 'bullying' || roomParam === 'literasi-digital' || roomParam === 'ketimpangan-sosial')
+    ? roomParam
+    : 'bullying';
+
+  const [activeRoomId, setActiveRoomId] = useState<IssueTopicId>(initialRoom);
   const [messages, setMessages] = useState<RoomChatMessage[]>([]);
   const [inputText, setInputText] = useState<string>('');
   const [selectedTag, setSelectedTag] = useState<string>('💡 Solusi Konkret');
@@ -84,9 +86,9 @@ export const Forum: React.FC = () => {
       return;
     }
 
-    const currentAuthorName = user?.name || 'Faisal';
+    const currentAuthorName = user?.name || 'Pengguna';
     const currentAuthorRole = user?.role || 'Mahasiswa Pendidikan';
-    const currentAuthorAvatar = user?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80';
+    const currentAuthorAvatar = user?.avatar || '';
 
     const now = new Date();
     const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
@@ -160,7 +162,7 @@ export const Forum: React.FC = () => {
 
   const handleReaction = (msgId: string, type: 'upvote' | 'insightful') => {
     if (!isAuthenticated) {
-      showToast('Silakan login untuk memberikan apresiasi tanggapan.', 'info');
+      openAuthModal('Masuk akun untuk memberikan apresiasi pada tanggapan rekan guru.', '/forum');
       return;
     }
     const updated = StorageService.toggleMessageReaction(msgId, type);
@@ -429,11 +431,17 @@ export const Forum: React.FC = () => {
                     className={`flex items-start gap-3 ${isMine ? 'flex-row-reverse' : ''}`}
                   >
                     {/* Author Avatar */}
-                    <img
-                      src={msg.authorAvatar}
-                      alt={msg.authorName}
-                      className="w-9 h-9 rounded-2xl object-cover border border-slate-200 shadow-xs flex-shrink-0 mt-1"
-                    />
+                    {msg.authorAvatar ? (
+                      <img
+                        src={msg.authorAvatar}
+                        alt={msg.authorName}
+                        className="w-9 h-9 rounded-2xl object-cover border border-slate-200 shadow-xs flex-shrink-0 mt-1"
+                      />
+                    ) : (
+                      <div className="w-9 h-9 rounded-2xl bg-slate-100 border border-slate-200 shadow-xs flex-shrink-0 mt-1 flex items-center justify-center text-slate-500">
+                        <Users className="w-4 h-4 text-slate-500" />
+                      </div>
+                    )}
 
                     {/* Message Bubble Card */}
                     <div className={`max-w-[85%] sm:max-w-[75%] space-y-1.5 ${isMine ? 'text-right' : ''}`}>
@@ -533,76 +541,114 @@ export const Forum: React.FC = () => {
             {/* CHAT INPUT AREA */}
             <div className="p-4 bg-[#FAFCFF] border-t border-blue-100">
               
-              {/* Replying Banner */}
-              {replyingTo && (
-                <div className="mb-2.5 p-2 px-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-1.5 text-blue-900 truncate">
-                    <CornerDownRight className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
-                    <span>Membalas <strong>{replyingTo.authorName}</strong>:</span>
-                    <span className="text-slate-500 truncate italic">"{replyingTo.content}"</span>
+              {!isAuthenticated ? (
+                <div className="p-6 rounded-2xl bg-gradient-to-r from-blue-50/80 via-white to-blue-50/80 border border-blue-200 text-center space-y-3 shadow-xs">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-bold">
+                    <Lock className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Ruang Diskusi Terproteksi</span>
                   </div>
-                  <button
-                    onClick={() => setReplyingTo(null)}
-                    className="p-1 text-slate-400 hover:text-slate-700 rounded"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+
+                  <h4 className="font-display font-bold text-base text-navy">
+                    Bergabunglah dalam Musyawarah Calon Pendidik
+                  </h4>
+
+                  <p className="text-xs text-slate-600 max-w-lg mx-auto leading-relaxed">
+                    Untuk menjaga keaslian identitas dan iklim diskusi yang berintegritas, pengiriman tanggapan hanya dapat dilakukan oleh akun calon guru yang telah masuk.
+                  </p>
+
+                  <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => openAuthModal('Masuk akun untuk menyampaikan pandangan kritis dan berdiskusi di forum.', '/forum')}
+                      className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider shadow-sm transition-all flex items-center gap-2 cursor-pointer"
+                    >
+                      <LogIn className="w-3.5 h-3.5" />
+                      <span>Masuk Akun untuk Berdiskusi</span>
+                    </button>
+
+                    <Link
+                      to="/register?redirect=/forum"
+                      className="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-blue-700 border border-blue-200 font-bold text-xs transition-all"
+                    >
+                      <span>Daftar Akun Baru</span>
+                    </Link>
+                  </div>
                 </div>
+              ) : (
+                <>
+                  {/* Replying Banner */}
+                  {replyingTo && (
+                    <div className="mb-2.5 p-2 px-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5 text-blue-900 truncate">
+                        <CornerDownRight className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
+                        <span>Membalas <strong>{replyingTo.authorName}</strong>:</span>
+                        <span className="text-slate-500 truncate italic">"{replyingTo.content}"</span>
+                      </div>
+                      <button
+                        onClick={() => setReplyingTo(null)}
+                        className="p-1 text-slate-400 hover:text-slate-700 rounded"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Tag Selector Chips */}
+                  <div className="flex items-center gap-1.5 mb-2 overflow-x-auto pb-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">
+                      Kategori Nalar:
+                    </span>
+                    {tagOptions.map((tag) => (
+                      <button
+                        key={tag}
+                        onClick={() => setSelectedTag(tag)}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all ${
+                          selectedTag === tag
+                            ? 'bg-blue-600 text-white shadow-xs'
+                            : 'bg-white text-slate-600 border border-slate-200 hover:bg-blue-50'
+                        }`}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Input Box */}
+                  <div className="relative bg-white rounded-2xl border border-slate-200 shadow-sm focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
+                    <textarea
+                      ref={textareaRef}
+                      value={inputText}
+                      onChange={(e) => setInputText(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder={`Tuliskan tanggapan, bukti lapangan, atau pertanyaan kritis Anda di Room ${activeRoom.name}...`}
+                      rows={2}
+                      className="w-full p-3.5 pr-24 rounded-2xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 resize-none focus:outline-none"
+                    />
+
+                    {/* Action Send Button */}
+                    <div className="absolute right-3 bottom-3 flex items-center gap-2">
+                      <span className="hidden sm:inline text-[10px] text-slate-400 font-medium">
+                        Enter ↵
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleSendMessage}
+                        disabled={!inputText.trim()}
+                        className="p-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-40 disabled:hover:bg-blue-600 transition-all shadow-sm flex items-center gap-1.5"
+                        aria-label="Kirim tanggapan"
+                      >
+                        <Send className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px] text-slate-400 mt-2 px-1">
+                    <span>Tekan <strong>Shift + Enter</strong> untuk baris baru.</span>
+                    <span>Mengirim sebagai: <strong>{user?.name} ({user?.role})</strong></span>
+                  </div>
+                </>
               )}
 
-              {/* Tag Selector Chips */}
-              <div className="flex items-center gap-1.5 mb-2 overflow-x-auto pb-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">
-                  Kategori Nalar:
-                </span>
-                {tagOptions.map((tag) => (
-                  <button
-                    key={tag}
-                    onClick={() => setSelectedTag(tag)}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all ${
-                      selectedTag === tag
-                        ? 'bg-blue-600 text-white shadow-xs'
-                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-blue-50'
-                    }`}
-                  >
-                    {tag}
-                  </button>
-                ))}
-              </div>
-
-              {/* Input Box */}
-              <div className="relative bg-white rounded-2xl border border-slate-200 shadow-sm focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
-                <textarea
-                  ref={textareaRef}
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder={`Tuliskan tanggapan, bukti lapangan, atau pertanyaan kritis Anda di Room ${activeRoom.name}...`}
-                  rows={2}
-                  className="w-full p-3.5 pr-24 rounded-2xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 resize-none focus:outline-none"
-                />
-
-                {/* Action Send Button */}
-                <div className="absolute right-3 bottom-3 flex items-center gap-2">
-                  <span className="hidden sm:inline text-[10px] text-slate-400 font-medium">
-                    Enter ↵
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleSendMessage}
-                    disabled={!inputText.trim()}
-                    className="p-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-40 disabled:hover:bg-blue-600 transition-all shadow-sm flex items-center gap-1.5"
-                    aria-label="Kirim tanggapan"
-                  >
-                    <Send className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between text-[11px] text-slate-400 mt-2 px-1">
-                <span>Tekan <strong>Shift + Enter</strong> untuk baris baru.</span>
-                <span>Mengirim sebagai: <strong>{user?.name || 'Faisal'} ({user?.role || 'Mahasiswa Pendidikan'})</strong></span>
-              </div>
             </div>
 
           </main>

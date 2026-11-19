@@ -1,31 +1,50 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Lock, Mail, ArrowRight, Sparkles, BrainCircuit } from 'lucide-react';
+import { Lock, Mail, ArrowRight, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { BatikPattern } from '../components/common/BatikPattern';
 import logoImg from '../assets/logo.png';
 
 export const Login: React.FC = () => {
-  const [email, setEmail] = useState('faisal.edukasi@gmail.com');
-  const [password, setPassword] = useState('password123');
+  const [searchParams] = useSearchParams();
+  const redirectTarget = searchParams.get('redirect') || '/ai-learning';
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const { login } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
-      showToast('Harap isi email dan kata sandi.', 'error');
+    setErrorMessage('');
+
+    const cleanEmail = email.trim();
+    if (!cleanEmail || !password) {
+      setErrorMessage('Harap isi alamat email dan kata sandi.');
+      showToast('Harap isi alamat email dan kata sandi.', 'error');
       return;
     }
 
-    login(email, password);
-    showToast('Selamat datang kembali di Mind Bridge Global!', 'success');
-    navigate('/');
+    setIsLoading(true);
+    try {
+      const result = await login(cleanEmail, password);
+      if (result.success) {
+        showToast(result.message, 'success');
+        navigate(redirectTarget);
+      } else {
+        setErrorMessage(result.message);
+        showToast(result.message, 'error');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -49,11 +68,18 @@ export const Login: React.FC = () => {
             Masuk Akun
           </h1>
           <p className="text-xs sm:text-sm text-slate-500">
-            Akses forum diskusi, simpan jurnal, dan catat skor nalar kritis Anda.
+            Masuk untuk mengakses materi pembelajaran, dialektika AI, dan forum diskusi.
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {errorMessage && (
+          <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-600" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleLoginSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-bold uppercase text-slate-600 mb-1.5">
               Alamat Email
@@ -64,9 +90,10 @@ export const Login: React.FC = () => {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="nama@kampus.ac.id"
+                placeholder="nama@email.com"
                 className="w-full pl-10 pr-4 py-3 bg-slate-50 rounded-xl border border-slate-200 text-xs sm:text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
+                autoComplete="email"
               />
             </div>
           </div>
@@ -81,9 +108,10 @@ export const Login: React.FC = () => {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="Masukkan kata sandi Anda"
                 className="w-full pl-10 pr-4 py-3 bg-slate-50 rounded-xl border border-slate-200 text-xs sm:text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
+                autoComplete="current-password"
               />
             </div>
           </div>
@@ -96,29 +124,29 @@ export const Login: React.FC = () => {
                 onChange={(e) => setRememberMe(e.target.checked)}
                 className="rounded text-blue-600 focus:ring-blue-500 border-slate-300"
               />
-              <span>Ingat saya</span>
+              <span>Ingat saya di perangkat ini</span>
             </label>
-
-            <span className="text-blue-600 hover:underline cursor-pointer font-semibold">
-              Lupa kata sandi?
-            </span>
           </div>
 
           <div className="pt-2">
             <button
               type="submit"
-              className="w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider shadow-md shadow-blue-500/20 transition-all flex items-center justify-center gap-2"
+              disabled={isLoading}
+              className="w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider shadow-md shadow-blue-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              <span>Masuk Sekarang</span>
+              <span>{isLoading ? 'Memeriksa akun...' : 'Masuk Sekarang'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </form>
 
-        <div className="text-center pt-2 text-xs text-slate-500">
-          Belum memiliki akun?{' '}
-          <Link to="/register" className="font-bold text-blue-600 hover:underline">
-            Daftar Akun Baru
+        <div className="text-center pt-2 text-xs text-slate-600">
+          Belum punya akun?{' '}
+          <Link 
+            to={`/register?redirect=${encodeURIComponent(redirectTarget)}`} 
+            className="font-bold text-blue-600 hover:underline"
+          >
+            Daftar sekarang
           </Link>
         </div>
       </motion.div>

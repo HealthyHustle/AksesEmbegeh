@@ -192,7 +192,7 @@ export interface User {
   name: string;
   email: string;
   role: string;
-  avatar: string;
+  avatar?: string;
   institution?: string;
   bio?: string;
   joinedAt: string;
@@ -228,4 +228,56 @@ export interface NotificationItem {
   isRead: boolean;
   link?: string;
   type: 'system' | 'forum' | 'test' | 'aspirasi';
+}
+
+export interface AIQuotaStatus {
+  used: number;
+  max: number;
+  remaining: number;
+  isExhausted: boolean;
+  isAnonymous: boolean;
+}
+
+export interface HookQuestion {
+  id: string;
+  topic: IssueTopicId;
+  question: string;
+  contextNote: string;
+  suggestedAnswerStarts: string[];
+}
+
+export interface PillarCompetency {
+  domain: 'Pedagogik' | 'Kepribadian' | 'Sosial' | 'Profesional';
+  description: string;
+}
+
+export interface PillarDetail {
+  id: IssueTopicId;
+  title: string;
+  subtitle: string;
+  badge: string;
+  iconName: string;
+  color: string;
+  accentColor: string;
+  bgLight: string;
+  description: string;
+  placeContext: string; // Critical Pedagogy of Place narrative
+  learningObjectives: string[];
+  contextualCase: {
+    headline: string;
+    locationExample: string;
+    problemDescription: string;
+    reflectionPrompt: string;
+  };
+  competencies: PillarCompetency[];
+  urgencyMetric: {
+    percentage: number;
+    label: string;
+    stats: { label: string; value: string }[];
+  };
+  actionLinks: {
+    aiTopic: IssueTopicId;
+    testRoute: string;
+    forumTopic: IssueTopicId;
+  };
 }

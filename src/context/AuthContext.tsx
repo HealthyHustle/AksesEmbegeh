@@ -1,73 +1,284 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '../types';
-import { StorageService, DEFAULT_USER } from '../services/storageService';
+import { AuthService, StoredUserAccount } from '../services/authService';
+
+export interface AuthResponse {
+  success: boolean;
+  message: string;
+}
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  login: (email?: string, password?: string) => boolean;
-  register: (name: string, email: string, password?: string, institution?: string, role?: string) => boolean;
-  logout: () => void;
-  updateProfile: (updatedData: Partial<User>) => void;
+  isLoadingSession: boolean;
+  login: (email: string, password: string) => Promise<AuthResponse>;
+  register: (
+    name: string,
+    email: string,
+    password: string,
+    confirmPassword?: string,
+    institution?: string,
+    role?: string
+  ) => Promise<AuthResponse>;
+  logout: () => Promise<void>;
+  updateProfile: (updatedData: Partial<User>) => Promise<void>;
+  isAuthModalOpen: boolean;
+  authModalReason: string;
+  authRedirectPath: string;
+  openAuthModal: (reason?: string, redirectPath?: string) => void;
+  closeAuthModal: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(() => {
-    const saved = StorageService.getUser();
-    return saved || DEFAULT_USER; // Start with default logged-in demo user "Faisal"
-  });
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoadingSession, setIsLoadingSession] = useState(true);
 
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalReason, setAuthModalReason] = useState(
+    'Silakan masuk ke akun Anda untuk melanjutkan aktivitas pembelajaran.'
+  );
+  const [authRedirectPath, setAuthRedirectPath] = useState('/');
+
+  // Pulihkan sesi pengguna saat aplikasi dimuat atau halaman di-refresh
   useEffect(() => {
-    StorageService.setUser(user);
-  }, [user]);
-
-  const login = (email?: string, _password?: string): boolean => {
-    const newUser: User = {
-      ...DEFAULT_USER,
-      name: email ? email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1) : 'Faisal',
-      email: email || 'faisal.edukasi@gmail.com',
+    let isMounted = true;
+    const restoreSession = async () => {
+      try {
+        const currentUser = await AuthService.getCurrentUser();
+        if (isMounted && currentUser) {
+          setUser(currentUser);
+        }
+      } catch (err) {
+        console.error('Gagal memulihkan sesi pengguna:', err);
+      } finally {
+        if (isMounted) {
+          setIsLoadingSession(false);
+        }
+      }
     };
-    setUser(newUser);
-    return true;
-  };
 
-  const register = (name: string, email: string, _password?: string, institution?: string, role?: string): boolean => {
-    const newUser: User = {
-      id: `usr-${Date.now()}`,
-      name: name || 'Pendidik Muda',
-      email: email,
-      role: role || 'Mahasiswa Pendidikan',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-      institution: institution || 'Universitas Indonesia',
-      bio: 'Pemerhati pendidikan inklusif dan penalaran kritis.',
-      joinedAt: 'Hari ini'
+    restoreSession();
+    return () => {
+      isMounted = false;
     };
-    setUser(newUser);
-    return true;
+  }, []);
+
+  const openAuthModal = (reason?: string, redirectPath?: string) => {
+    if (reason) setAuthModalReason(reason);
+    if (redirectPath) setAuthRedirectPath(redirectPath);
+    setIsAuthModalOpen(true);
   };
 
-  const logout = () => {
-    setUser(null);
-    StorageService.setUser(null);
+  const closeAuthModal = () => {
+    setIsAuthModalOpen(false);
   };
 
-  const updateProfile = (updatedData: Partial<User>) => {
+  /**
+   * Login autentikasi nyata berbasis validasi email & hash kata sandi
+   */
+  const login = async (email: string, password: string): Promise<AuthResponse> => {
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!cleanEmail || !password) {
+      return {
+        success: false,
+        message: 'Email dan kata sandi wajib diisi.'
+      };
+    }
+
+    try {
+      const account = await AuthService.getUserByEmail(cleanEmail);
+
+      if (!account) {
+        return {
+          success: false,
+          message: 'Akun belum terdaftar. Silakan daftar akun baru terlebih dahulu.'
+        };
+      }
+
+      // Validasi hash kata sandi menggunakan salt unik milik akun
+      const calculatedHash = await AuthService.hashPassword(password, account.salt);
+
+      if (calculatedHash !== account.passwordHash) {
+        return {
+          success: false,
+          message: 'Kata sandi tidak sesuai. Silakan periksa kembali.'
+        };
+      }
+
+      // Buat dan simpan sesi aktif
+      await AuthService.createSession(account);
+
+      const cleanAvatar = (account.avatar && !account.avatar.includes('unsplash.com')) ? account.avatar : '';
+      const publicUser: User = {
+        id: account.id,
+        name: account.name,
+        email: account.email,
+        role: account.role,
+        avatar: cleanAvatar,
+        institution: account.institution,
+        bio: account.bio,
+        joinedAt: account.joinedAt
+      };
+
+      setUser(publicUser);
+      setIsAuthModalOpen(false);
+
+      return {
+        success: true,
+        message: `Selamat datang kembali, ${account.name}!`
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        message: err.message || 'Terjadi kendala saat memproses login. Silakan coba lagi.'
+      };
+    }
+  };
+
+  /**
+   * Pendaftaran akun baru dengan validasi data dan penyimpanan hash aman
+   */
+  const register = async (
+    name: string,
+    email: string,
+    password: string,
+    confirmPassword?: string,
+    institution = '',
+    role = 'Calon Guru'
+  ): Promise<AuthResponse> => {
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanName = name.trim();
+
+    if (!cleanName || !cleanEmail || !password) {
+      return {
+        success: false,
+        message: 'Nama lengkap, email, dan kata sandi wajib diisi.'
+      };
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      return {
+        success: false,
+        message: 'Format alamat email tidak valid.'
+      };
+    }
+
+    if (password.length < 6) {
+      return {
+        success: false,
+        message: 'Kata sandi minimal 6 karakter.'
+      };
+    }
+
+    if (confirmPassword !== undefined && password !== confirmPassword) {
+      return {
+        success: false,
+        message: 'Konfirmasi kata sandi tidak cocok.'
+      };
+    }
+
+    try {
+      // Periksa apakah email sudah pernah didaftarkan
+      const existingAccount = await AuthService.getUserByEmail(cleanEmail);
+      if (existingAccount) {
+        return {
+          success: false,
+          message: 'Alamat email ini sudah terdaftar. Silakan masuk menggunakan akun Anda.'
+        };
+      }
+
+      // Buat salt dan hash kata sandi aman
+      const salt = AuthService.generateSalt();
+      const passwordHash = await AuthService.hashPassword(password, salt);
+
+      const newAccount: StoredUserAccount = {
+        id: `usr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        name: cleanName,
+        email: cleanEmail,
+        role: role || 'Calon Guru',
+        avatar: '',
+        institution: institution.trim() || 'Lembaga Pendidikan',
+        bio: 'Calon pendidik yang berkomitmen mengembangkan nalar kritis di ruang kelas.',
+        joinedAt: new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }),
+        salt,
+        passwordHash,
+        createdAt: Date.now()
+      };
+
+      await AuthService.saveUser(newAccount);
+      await AuthService.createSession(newAccount);
+
+      const publicUser: User = {
+        id: newAccount.id,
+        name: newAccount.name,
+        email: newAccount.email,
+        role: newAccount.role,
+        avatar: '',
+        institution: newAccount.institution,
+        bio: newAccount.bio,
+        joinedAt: newAccount.joinedAt
+      };
+
+      setUser(publicUser);
+      setIsAuthModalOpen(false);
+
+      return {
+        success: true,
+        message: `Pendaftaran berhasil. Selamat datang di Mind Bridge Global, ${cleanName}!`
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        message: err.message || 'Terjadi kendala saat mendaftarkan akun. Silakan coba lagi.'
+      };
+    }
+  };
+
+  /**
+   * Logout mengakhiri sesi secara tuntas
+   */
+  const logout = async () => {
+    try {
+      await AuthService.terminateSession();
+    } finally {
+      setUser(null);
+    }
+  };
+
+  /**
+   * Perbarui data profil pengguna
+   */
+  const updateProfile = async (updatedData: Partial<User>) => {
     if (!user) return;
-    const updated = { ...user, ...updatedData };
-    setUser(updated);
+    try {
+      await AuthService.updateUserProfile(user.email, updatedData);
+      setUser(prev => prev ? { ...prev, ...updatedData } : null);
+    } catch (err) {
+      console.error('Gagal memperbarui profil:', err);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      isAuthenticated: !!user,
-      login,
-      register,
-      logout,
-      updateProfile
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        isLoadingSession,
+        login,
+        register,
+        logout,
+        updateProfile,
+        isAuthModalOpen,
+        authModalReason,
+        authRedirectPath,
+        openAuthModal,
+        closeAuthModal
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

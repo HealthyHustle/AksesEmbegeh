@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Sparkles, Heart, ShieldCheck, Mail, Globe, MapPin } from 'lucide-react';
+import { Sparkles, ShieldCheck, Mail, Globe, MapPin } from 'lucide-react';
 import { BatikPattern } from './BatikPattern';
 import logoImg from '../../assets/logo.png';
 
@@ -60,13 +60,16 @@ export const Footer: React.FC = () => {
                 <Link to="/" className="hover:text-blue-400 transition-colors">Beranda</Link>
               </li>
               <li>
-                <Link to="/explore" className="hover:text-blue-400 transition-colors">Eksplorasi & Jurnal</Link>
+                <Link to="/ai-learning" className="hover:text-blue-400 transition-colors flex items-center gap-1">
+                  AI Learning
+                  <span className="text-[10px] bg-blue-600 px-1.5 py-0.2 rounded font-bold text-white">Socratic</span>
+                </Link>
               </li>
               <li>
-                <Link to="/critical-mind-ai" className="hover:text-blue-400 transition-colors flex items-center gap-1">
-                  Critical Mind AI
-                  <span className="text-[10px] bg-blue-600 px-1.5 py-0.2 rounded font-bold text-white">PRO</span>
-                </Link>
+                <Link to="/ekosistem" className="hover:text-blue-400 transition-colors">Pilar Ekosistem</Link>
+              </li>
+              <li>
+                <Link to="/explore" className="hover:text-blue-400 transition-colors">Eksplorasi & Jurnal</Link>
               </li>
               <li>
                 <Link to="/critical-thinking-test" className="hover:text-blue-400 transition-colors">Tes Critical Thinking</Link>

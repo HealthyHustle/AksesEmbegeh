@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -15,7 +15,12 @@ import {
   School,
   Mail,
   Calendar,
-  X
+  X,
+  Camera,
+  Trash2,
+  Upload,
+  Check,
+  AlertCircle
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useBookmarks } from '../context/BookmarkContext';
@@ -26,9 +31,16 @@ import { useToast } from '../context/ToastContext';
 
 export const Profile: React.FC = () => {
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user, logout, updateProfile } = useAuth();
   const { bookmarks, toggleBookmark } = useBookmarks();
   const { showToast } = useToast();
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [previewMeta, setPreviewMeta] = useState<{ name: string; sizeKb: number } | null>(null);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
+  const [isSavingPhoto, setIsSavingPhoto] = useState(false);
+  const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState<'tests' | 'journals' | 'aspirations'>('tests');
   const [testResults, setTestResults] = useState<TestResult[]>(() => StorageService.getTestResults());
@@ -45,6 +57,126 @@ export const Profile: React.FC = () => {
 
   const bookmarkedJournals = JOURNALS_DATA.filter(j => bookmarks.includes(j.id));
   const userAspirations = StorageService.getAspirations();
+
+  // Helper kompresi dan optimasi gambar foto profil menggunakan Canvas HTML5
+  const processImageFile = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new window.Image();
+        img.onload = () => {
+          // Batasi resolusi maksimal 400x400 agar performa cepat & hemat penyimpanan
+          const maxDim = 400;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(e.target?.result as string);
+            return;
+          }
+
+          ctx.drawImage(img, 0, 0, width, height);
+          const mimeType = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+          const dataUrl = canvas.toDataURL(mimeType, 0.88);
+          resolve(dataUrl);
+        };
+        img.onerror = () => reject(new Error('Gagal memproses file gambar.'));
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = () => reject(new Error('Gagal membaca file gambar.'));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024; // Maksimal 2 MB
+  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/jpg'];
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validasi format JPG, JPEG, PNG
+    const fileType = file.type.toLowerCase();
+    const fileExtension = file.name.split('.').pop()?.toLowerCase();
+    const isValidFormat = 
+      ALLOWED_TYPES.includes(fileType) || 
+      fileExtension === 'jpg' || 
+      fileExtension === 'jpeg' || 
+      fileExtension === 'png';
+
+    if (!isValidFormat) {
+      showToast('Format gambar harus berupa JPG, JPEG, atau PNG.', 'error');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    // Validasi batas ukuran file (maks 2MB)
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      showToast('Ukuran gambar maksimal 2 MB agar performa website tetap optimal.', 'error');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    try {
+      setIsProcessingImage(true);
+      const optimizedDataUrl = await processImageFile(file);
+      setPreviewImage(optimizedDataUrl);
+      setPreviewMeta({
+        name: file.name,
+        sizeKb: Math.round(file.size / 1024)
+      });
+    } catch {
+      showToast('Gagal memuat gambar. Silakan coba file lain.', 'error');
+    } finally {
+      setIsProcessingImage(false);
+    }
+  };
+
+  const handleSavePhoto = async () => {
+    if (!previewImage) return;
+    setIsSavingPhoto(true);
+    try {
+      await updateProfile({ avatar: previewImage });
+      setPreviewImage(null);
+      setPreviewMeta(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      showToast('Foto profil berhasil disimpan!', 'success');
+    } catch {
+      showToast('Gagal menyimpan foto profil. Silakan coba lagi.', 'error');
+    } finally {
+      setIsSavingPhoto(false);
+    }
+  };
+
+  const handleCancelPreview = () => {
+    setPreviewImage(null);
+    setPreviewMeta(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleDeletePhoto = async () => {
+    try {
+      await updateProfile({ avatar: '' });
+      setIsConfirmDeleteOpen(false);
+      showToast('Foto profil berhasil dihapus.', 'info');
+    } catch {
+      showToast('Gagal menghapus foto profil.', 'error');
+    }
+  };
 
   if (!user) {
     return (
@@ -69,13 +201,52 @@ export const Profile: React.FC = () => {
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-blue-100 shadow-soft-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             
             {/* User Avatar & Info */}
-            <div className="flex items-start sm:items-center gap-5">
-              <img
-                src={user.avatar}
-                alt={user.name}
-                className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl object-cover ring-4 ring-blue-100 shadow-md flex-shrink-0"
-              />
-              <div className="space-y-1.5">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
+              
+              {/* Avatar Box with interactive upload */}
+              <div className="relative flex-shrink-0 group">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/jpg"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+
+                {user.avatar ? (
+                  <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-3xl overflow-hidden ring-4 ring-blue-100 shadow-md">
+                    <img
+                      src={user.avatar}
+                      alt={user.name}
+                      className="w-full h-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      title="Ganti Foto Profil"
+                      className="absolute inset-0 bg-slate-950/45 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-bold gap-1 cursor-pointer"
+                    >
+                      <Camera className="w-5 h-5 text-white" />
+                      <span>Ganti</span>
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    title="Tambah Foto Profil"
+                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-slate-50 border-2 border-dashed border-slate-300 hover:border-blue-400 hover:bg-blue-50/40 transition-all flex flex-col items-center justify-center text-slate-400 hover:text-blue-600 shadow-2xs group cursor-pointer"
+                  >
+                    <User className="w-9 h-9 sm:w-11 sm:h-11 text-slate-400 group-hover:text-blue-500 transition-colors stroke-[1.5]" />
+                    <span className="text-[10px] font-semibold text-slate-400 group-hover:text-blue-600 transition-colors mt-0.5">
+                      Unggah
+                    </span>
+                  </button>
+                )}
+              </div>
+
+              {/* Info & Photo Action Buttons */}
+              <div className="space-y-1.5 min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="font-display font-extrabold text-2xl sm:text-3xl text-navy">
                     {user.name}
@@ -107,6 +278,44 @@ export const Profile: React.FC = () => {
                     “{user.bio}”
                   </p>
                 )}
+
+                {/* Photo Action Row */}
+                <div className="pt-2 flex flex-wrap items-center gap-2">
+                  {!user.avatar ? (
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isProcessingImage}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold border border-blue-200 transition-all shadow-2xs cursor-pointer disabled:opacity-50"
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                      <span>{isProcessingImage ? 'Memproses...' : 'Tambah Foto Profil'}</span>
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isProcessingImage}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"
+                      >
+                        <Camera className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Ganti Foto</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsConfirmDeleteOpen(true)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Hapus Foto</span>
+                      </button>
+                    </>
+                  )}
+                  <span className="text-[11px] text-slate-400">
+                    JPG, JPEG, PNG (Maks. 2 MB)
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -371,9 +580,122 @@ export const Profile: React.FC = () => {
               <div className="pt-2 flex justify-end">
                 <button
                   onClick={() => setReadingJournal(null)}
-                  className="px-5 py-2 rounded-xl bg-navy text-white text-xs font-bold"
+                  className="px-5 py-2 rounded-xl bg-navy text-white text-xs font-bold cursor-pointer"
                 >
                   Tutup
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* PHOTO PREVIEW MODAL */}
+      <AnimatePresence>
+        {previewImage && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="bg-white rounded-3xl p-6 sm:p-8 max-w-sm w-full shadow-2xl border border-blue-100 space-y-5 text-center relative"
+            >
+              <button
+                type="button"
+                onClick={handleCancelPreview}
+                className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                aria-label="Tutup pratinjau"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="space-y-1">
+                <h3 className="font-display font-extrabold text-xl text-navy">
+                  Pratinjau Foto Profil
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Periksa tampilan foto profil Anda sebelum disimpan ke akun.
+                </p>
+              </div>
+
+              {/* Photo preview frame */}
+              <div className="w-32 h-32 sm:w-36 sm:h-36 mx-auto rounded-3xl overflow-hidden ring-4 ring-blue-100 shadow-md border-2 border-white bg-slate-100">
+                <img
+                  src={previewImage}
+                  alt="Pratinjau Foto Profil"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+
+              {previewMeta && (
+                <div className="text-[11px] text-slate-500 bg-slate-50 py-1.5 px-3 rounded-xl inline-block border border-slate-200">
+                  <span className="font-medium text-slate-700 truncate max-w-[180px] inline-block align-bottom">{previewMeta.name}</span>
+                  <span className="mx-1">•</span>
+                  <span>{previewMeta.sizeKb} KB</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={handleCancelPreview}
+                  disabled={isSavingPhoto}
+                  className="w-full py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSavePhoto}
+                  disabled={isSavingPhoto}
+                  className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-md shadow-blue-500/20 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>{isSavingPhoto ? 'Menyimpan...' : 'Simpan Foto'}</span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* DELETE CONFIRMATION MODAL */}
+      <AnimatePresence>
+        {isConfirmDeleteOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-3xl p-6 sm:p-7 max-w-sm w-full shadow-2xl border border-rose-100 space-y-4 text-center"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
+                <Trash2 className="w-6 h-6" />
+              </div>
+
+              <div className="space-y-1">
+                <h3 className="font-display font-bold text-lg text-navy">
+                  Hapus Foto Profil?
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Foto profil Anda akan dihapus dan tampilan akan kembali ke placeholder minimalis.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setIsConfirmDeleteOpen(false)}
+                  className="w-full py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeletePhoto}
+                  className="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Ya, Hapus
                 </button>
               </div>
             </motion.div>

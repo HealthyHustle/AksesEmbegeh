@@ -328,11 +328,11 @@ export const TestSession: React.FC = () => {
               </button>
 
               <Link
-                to="/forum"
+                to={`/forum?room=${topic}`}
                 className="px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all flex items-center gap-2"
               >
                 <MessageSquare className="w-4 h-4" />
-                <span>Bagikan Perspektif di Forum</span>
+                <span>Diskusikan Hasil di Forum Guru</span>
               </Link>
             </div>
 

@@ -269,7 +269,7 @@ export const INITIAL_ROOM_MESSAGES: RoomChatMessage[] = [
     authorName: 'Dr. Indah Pratiwi',
     authorRole: 'Peneliti Sosiologi Pendidikan BRIN',
     authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
-    content: 'Ini adalah contoh nyata dari kegagalan "Cargo Cult Policy"—mengirimkan gadget tanpa ekosistem utilitas dasar. Kebijakan afirmasi ke depan harus berbasis "Appropriate Technology": teknologi tepat guna yang berdaya tahan tinggi terhadap iklim tropis dan ketiadaan sinyal.',
+    content: 'Ini adalah contoh nyata dari kegagalan "Cargo Cult Policy", yaitu mengirimkan perangkat tanpa kesiapan sarana dasar. Kebijakan afirmasi ke depan harus mengutamakan teknologi tepat guna yang berdaya tahan tinggi dan sesuai kondisi setempat.',
     timestamp: '09.15',
     upvotes: 24,
     insightfulCount: 18,

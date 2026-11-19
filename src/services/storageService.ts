@@ -4,6 +4,8 @@ import { INITIAL_ASPIRATIONS } from '../data/aspirations';
 
 const KEYS = {
   USER: 'mbg_user',
+  REGISTERED_ACCOUNTS: 'mbg_registered_accounts',
+  AUTH_SESSION: 'mbg_auth_session',
   BOOKMARKED_JOURNALS: 'mbg_bookmarked_journals',
   TEST_RESULTS: 'mbg_test_results',
   ASPIRATIONS: 'mbg_aspirations',
@@ -13,20 +15,49 @@ const KEYS = {
   AI_SESSIONS: 'mbg_ai_sessions'
 };
 
-export const DEFAULT_USER: User = {
-  id: 'usr-001',
-  name: 'Faisal',
-  email: 'faisal.edukasi@gmail.com',
-  role: 'Mahasiswa Pendidikan',
-  avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-  institution: 'Universitas Pendidikan Indonesia (UPI)',
-  bio: 'Calon pendidik masa depan yang berfokus pada integrasi nalar kritis dan etika digital di ruang kelas.',
-  joinedAt: 'Agustus 2024'
-};
+export interface RegisteredAccount {
+  user: User;
+  passwordHash: string;
+}
 
 export class StorageService {
-  // --- USER AUTH ---
+  // User Auth & Session
+  public static async hashPassword(password: string): Promise<string> {
+    try {
+      const msgBuffer = new TextEncoder().encode(password + '_mbg_salt_2026');
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    } catch {
+      let hash = 0;
+      for (let i = 0; i < password.length; i++) {
+        hash = (hash << 5) - hash + password.charCodeAt(i);
+        hash |= 0;
+      }
+      return 'h_' + Math.abs(hash).toString(16);
+    }
+  }
+
+  public static getRegisteredAccounts(): RegisteredAccount[] {
+    const data = localStorage.getItem(KEYS.REGISTERED_ACCOUNTS);
+    if (!data) return [];
+    try {
+      return JSON.parse(data);
+    } catch {
+      return [];
+    }
+  }
+
+  public static saveRegisteredAccount(account: RegisteredAccount): void {
+    const current = this.getRegisteredAccounts();
+    const filtered = current.filter(a => a.user.email.toLowerCase() !== account.user.email.toLowerCase());
+    filtered.push(account);
+    localStorage.setItem(KEYS.REGISTERED_ACCOUNTS, JSON.stringify(filtered));
+  }
+
   public static getUser(): User | null {
+    const session = localStorage.getItem(KEYS.AUTH_SESSION);
+    if (!session) return null;
     const data = localStorage.getItem(KEYS.USER);
     if (!data) return null;
     try {
@@ -39,8 +70,13 @@ export class StorageService {
   public static setUser(user: User | null): void {
     if (user) {
       localStorage.setItem(KEYS.USER, JSON.stringify(user));
+      localStorage.setItem(KEYS.AUTH_SESSION, JSON.stringify({
+        token: `mbg_token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        createdAt: Date.now()
+      }));
     } else {
       localStorage.removeItem(KEYS.USER);
+      localStorage.removeItem(KEYS.AUTH_SESSION);
     }
   }
 
