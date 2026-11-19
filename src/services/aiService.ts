@@ -4,30 +4,32 @@ import { IssueTopicId, SocraticScore, ChatMessage } from '../types';
 // CENTRALIZED API CONFIGURATION: MIND BRIDGE GLOBAL
 // Production Webhook URL: Critical Mind AI
 // ============================================================
-export const N8N_WEBHOOK_URL = 'http://localhost:5678/webhook/mind-bridge-ai';
+export const N8N_WEBHOOK_URL = 'https://embegeh123.app.n8n.cloud/webhook/mind-bridge-ai';
 
 export const API_CONFIG = {
-  PRODUCTION_WEBHOOK_URL: N8N_WEBHOOK_URL,
+  PRODUCTION_WEBHOOK_URL: 'https://embegeh123.app.n8n.cloud/webhook/mind-bridge-ai',
   DEV_PROXY_PATH: '/n8n-local/webhook/mind-bridge-ai',
   REQUEST_TIMEOUT_MS: 30000,
 } as const;
 
 /**
  * Resolves active endpoint URL:
- * In Vite local dev, uses the Vite proxy (/n8n-local) to prevent CORS issues.
- * In production builds, uses the direct URL.
+ * In live production (e.g. GitHub Pages), uses the public n8n Cloud webhook.
+ * In Vite local dev, uses the Vite proxy (/n8n-local) if running local n8n, or n8n cloud.
  */
 export function resolveN8NUrl(): string {
-  const envOverride = import.meta.env.VITE_N8N_WEBHOOK_URL as string | undefined;
-  if (envOverride && !envOverride.includes('localhost') && !envOverride.includes('127.0.0.1')) {
-    return envOverride;
-  }
-
+  // Jika diakses di GitHub Pages atau domain publik lainnya, selalu gunakan Production n8n Cloud Webhook
   if (
     typeof window !== 'undefined' &&
-    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    window.location.hostname !== 'localhost' &&
+    window.location.hostname !== '127.0.0.1'
   ) {
-    return API_CONFIG.DEV_PROXY_PATH;
+    return API_CONFIG.PRODUCTION_WEBHOOK_URL;
+  }
+
+  const envOverride = import.meta.env.VITE_N8N_WEBHOOK_URL as string | undefined;
+  if (envOverride && envOverride.includes('n8n.cloud')) {
+    return envOverride;
   }
 
   return API_CONFIG.PRODUCTION_WEBHOOK_URL;
