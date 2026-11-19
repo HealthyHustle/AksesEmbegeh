@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: "pages"
@@ -14,6 +16,9 @@ concurrency:
 
 jobs:
   build-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -36,8 +41,25 @@ jobs:
           cp dist/index.html dist/404.html
           touch dist/.nojekyll
 
-      - name: Deploy to GitHub Pages
+      # Metode 1: Deploy ke branch gh-pages (jika Settings Pages memilih Deploy from a branch -> gh-pages)
+      - name: Deploy to gh-pages branch
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: dist
           branch: gh-pages
+
+      # Metode 2: Deploy otomatis via GitHub Actions (jika Settings Pages memilih Source: GitHub Actions)
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+        continue-on-error: true
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+        continue-on-error: true
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
