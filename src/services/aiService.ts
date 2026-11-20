@@ -142,8 +142,9 @@ export async function sendMessage(
       }
 
       if (response.status >= 500) {
+        const detailInfo = errorDetail ? ` (${errorDetail})` : '';
         throw new Error(
-          `Layanan AI n8n mengalami kendala internal (HTTP ${response.status}). Silakan coba beberapa saat lagi.`
+          `Layanan AI n8n mengalami kendala eksekusi internal HTTP ${response.status}${detailInfo}. Silakan periksa tab Executions pada alur n8n Anda untuk melihat node yang mengalami kendala.`
         );
       }
 
