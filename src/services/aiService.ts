@@ -2,21 +2,21 @@ import { IssueTopicId, SocraticScore, ChatMessage } from '../types';
 
 // ============================================================
 // CENTRALIZED API CONFIGURATION: MIND BRIDGE GLOBAL
-// Target Webhook URL: Critical Mind AI
+// Target Webhook URL: Critical Mind AI (HTTPS Tunnel to local n8n)
 // ============================================================
-export const N8N_WEBHOOK_URL = 'http://localhost:5678/webhook/mind-bridge-ai';
+export const N8N_WEBHOOK_URL = 'https://gotta-duplicate-areas-themselves.trycloudflare.com/webhook/mind-bridge-ai';
 
 export const API_CONFIG = {
-  PRIMARY_WEBHOOK_URL: 'http://localhost:5678/webhook/mind-bridge-ai',
-  FALLBACK_WEBHOOK_URL: 'https://embegeh123.app.n8n.cloud/webhook/mind-bridge-ai',
+  PRIMARY_WEBHOOK_URL: 'https://gotta-duplicate-areas-themselves.trycloudflare.com/webhook/mind-bridge-ai',
+  LOCAL_DIRECT_URL: 'http://localhost:5678/webhook/mind-bridge-ai',
   DEV_PROXY_PATH: '/n8n-local/webhook/mind-bridge-ai',
   REQUEST_TIMEOUT_MS: 30000,
 } as const;
 
 /**
  * Resolves active endpoint URL:
- * Defaults to user's specified webhook URL (http://localhost:5678/webhook/mind-bridge-ai),
- * or VITE_N8N_WEBHOOK_URL if configured.
+ * On HTTPS sites (e.g. GitHub Pages), uses the secure HTTPS tunnel.
+ * On local dev, uses local directly or via tunnel.
  */
 export function resolveN8NUrl(): string {
   const envOverride = import.meta.env.VITE_N8N_WEBHOOK_URL as string | undefined;
