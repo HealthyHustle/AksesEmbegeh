@@ -2,37 +2,29 @@ import { IssueTopicId, SocraticScore, ChatMessage } from '../types';
 
 // ============================================================
 // CENTRALIZED API CONFIGURATION: MIND BRIDGE GLOBAL
-// Production Webhook URL: Critical Mind AI
+// Target Webhook URL: Critical Mind AI
 // ============================================================
-export const N8N_WEBHOOK_URL = 'https://embegeh123.app.n8n.cloud/webhook/mind-bridge-ai';
+export const N8N_WEBHOOK_URL = 'http://localhost:5678/webhook/mind-bridge-ai';
 
 export const API_CONFIG = {
-  PRODUCTION_WEBHOOK_URL: 'https://embegeh123.app.n8n.cloud/webhook/mind-bridge-ai',
+  PRIMARY_WEBHOOK_URL: 'http://localhost:5678/webhook/mind-bridge-ai',
+  FALLBACK_WEBHOOK_URL: 'https://embegeh123.app.n8n.cloud/webhook/mind-bridge-ai',
   DEV_PROXY_PATH: '/n8n-local/webhook/mind-bridge-ai',
   REQUEST_TIMEOUT_MS: 30000,
 } as const;
 
 /**
  * Resolves active endpoint URL:
- * In live production (e.g. GitHub Pages), uses the public n8n Cloud webhook.
- * In Vite local dev, uses the Vite proxy (/n8n-local) if running local n8n, or n8n cloud.
+ * Defaults to user's specified webhook URL (http://localhost:5678/webhook/mind-bridge-ai),
+ * or VITE_N8N_WEBHOOK_URL if configured.
  */
 export function resolveN8NUrl(): string {
-  // Jika diakses di GitHub Pages atau domain publik lainnya, selalu gunakan Production n8n Cloud Webhook
-  if (
-    typeof window !== 'undefined' &&
-    window.location.hostname !== 'localhost' &&
-    window.location.hostname !== '127.0.0.1'
-  ) {
-    return API_CONFIG.PRODUCTION_WEBHOOK_URL;
-  }
-
   const envOverride = import.meta.env.VITE_N8N_WEBHOOK_URL as string | undefined;
-  if (envOverride && envOverride.includes('n8n.cloud')) {
-    return envOverride;
+  if (envOverride && envOverride.trim()) {
+    return envOverride.trim();
   }
 
-  return API_CONFIG.PRODUCTION_WEBHOOK_URL;
+  return API_CONFIG.PRIMARY_WEBHOOK_URL;
 }
 
 // ============================================================
@@ -137,7 +129,7 @@ export async function sendMessage(
 
       if (response.status === 503) {
         throw new Error(
-          'Layanan AI n8n sedang dalam pemeliharaan atau kelebihan beban (HTTP 503). Silakan coba beberapa saat lagi.'
+          errorDetail || 'Layanan AI n8n sedang dalam pemeliharaan atau kelebihan beban (HTTP 503). Silakan coba beberapa saat lagi.'
         );
       }
 
