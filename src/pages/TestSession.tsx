@@ -20,12 +20,15 @@ import confetti from 'canvas-confetti';
 import { QUESTIONS_DATA } from '../data/questions';
 import { IssueTopicId, Question, TestResult, CriticalThinkingLevel, DomainScore, CriticalThinkingDomain } from '../types';
 import { StorageService } from '../services/storageService';
+import { CloudSyncService } from '../services/cloudSyncService';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 
 export const TestSession: React.FC = () => {
   const { topic } = useParams<{ topic: string }>();
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { user } = useAuth();
 
   const validTopic = (topic === 'bullying' || topic === 'literasi-digital' || topic === 'ketimpangan-sosial')
     ? (topic as IssueTopicId)
@@ -134,6 +137,7 @@ export const TestSession: React.FC = () => {
     };
 
     StorageService.saveTestResult(result);
+    CloudSyncService.syncTestResult(result, user);
     setTestResult(result);
     setIsSubmitted(true);
     setConfirmSubmitModal(false);

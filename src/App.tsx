@@ -3,6 +3,7 @@ import { HashRouter as Router, Routes, Route, useLocation, Navigate } from 'reac
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import { BookmarkProvider } from './context/BookmarkContext';
+import { CloudSyncService } from './services/cloudSyncService';
 
 import { Navbar } from './components/common/Navbar';
 import { Footer } from './components/common/Footer';
@@ -53,6 +54,11 @@ const ScrollToTop: React.FC = () => {
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, isLoadingSession } = useAuth();
+
+  // Sinkronisasi otomatis data hasil tes responden lama yang tersimpan di browser
+  useEffect(() => {
+    CloudSyncService.autoSyncPendingData();
+  }, [isAuthenticated]);
 
   if (isLoadingSession) {
     return (
