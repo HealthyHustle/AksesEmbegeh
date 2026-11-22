@@ -10,10 +10,10 @@ import { TestResult, User } from '../types';
 import { StorageService } from './storageService';
 import { AuthService } from './authService';
 
-// Default endpoint Google Apps Script Web App (diperbarui via env atau konfigurasi langsung)
+// Endpoint Google Apps Script Web App resmi untuk sinkronisasi data penelitian
 export const GOOGLE_SHEET_WEBHOOK_URL = 
   import.meta.env.VITE_GOOGLE_SHEET_WEBHOOK_URL || 
-  'https://script.google.com/macros/s/AKfycbz_PENDING_CONFIG/exec';
+  'https://script.google.com/macros/s/AKfycbyFsd6h4cl-Ab9g8RxGXWWqGAvPoz7i7HwS6ORlN9HwtuzPGgnpDtPE0QsNx5ct1PdK/exec';
 
 const SYNCED_TESTS_KEY = 'mbg_synced_test_ids';
 const SYNCED_USER_KEY = 'mbg_synced_user_flag';

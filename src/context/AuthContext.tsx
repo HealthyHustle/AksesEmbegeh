@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '../types';
 import { AuthService, StoredUserAccount } from '../services/authService';
+import { CloudSyncService } from '../services/cloudSyncService';
 
 export interface AuthResponse {
   success: boolean;
@@ -126,6 +127,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(publicUser);
       setIsAuthModalOpen(false);
 
+      // Sinkronisasi data login/akun ke Google Spreadsheet di latar belakang
+      CloudSyncService.sendToGoogleSheet({ action: 'SYNC_USER', user: publicUser });
+
       return {
         success: true,
         message: `Selamat datang kembali, ${account.name}!`
@@ -225,6 +229,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setUser(publicUser);
       setIsAuthModalOpen(false);
+
+      // Sinkronisasi data login/akun ke Google Spreadsheet di latar belakang
+      CloudSyncService.sendToGoogleSheet({ action: 'SYNC_USER', user: publicUser });
 
       return {
         success: true,
